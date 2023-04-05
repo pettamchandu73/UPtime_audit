@@ -1,0 +1,36 @@
+---
+   - name: Get hostname
+     shell: hostname |awk -F"." '{print $1}'
+     register: hostname
+
+   - name: Get uptime
+#     shell: uptime -p | tr "," " "
+     shell: echo $(((($(date +%s)-$(date +%s --date $(uptime -s| awk '{print $1}')))/(3600*24)))) days     
+     register: uptime
+
+   - name: last yum update
+     shell: yum history info | grep "Begin time" | awk '{print $4,$5,$6}'
+     register: yum_update
+
+   - name: Get needs_restarting
+     shell: /bin/needs-restarting -r | grep "Reboot is required to" | awk '{print $1,$2,$3}'
+     register: needs_restarting
+     
+   - name: reboot Schedule_Day
+     shell: grep "OnCalendar" /etc/systemd/system/dnf-automatic-install.timer.d/override.conf | tail -n 1 | awk -F "=" '{print $2}'
+     register: Schedule_Day
+     
+   - name: Get Boot Space 
+     shell: df -h | grep boot | awk '{print$6,$5,$2}'
+     register: Boot_Space
+
+   - name: OS
+     shell: cat /etc/redhat-release
+     register: OS
+
+   - name: CSV - Write information into .csv file
+     lineinfile:
+       dest: /var/www/html/inventory/data/uptime_all.csv
+       line: "{{ hostname.stdout_lines|join(',') }},{{ inventory_hostname }},{{ uptime.stdout_lines|join(',') }},{{ yum_update.stdout_lines|join(',') }},{{ needs_restarting.stdout_lines|join(',') }},{{ Schedule_Day.stdout_lines|join(',') }},{{ Boot_Space.stdout_lines|join(',') }},{{ OS.stdout_lines|join(',') }},"
+       insertafter: EOF
+     delegate_to: 192.168.2.153

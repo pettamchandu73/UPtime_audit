@@ -1,0 +1,8 @@
+- hosts: deploy
+  serial: 1
+  become: yes
+  gather_facts: no
+  ignore_errors: yes
+  ignore_unreachable: yes
+  roles:
+  - deploy
